@@ -29,7 +29,7 @@ class NLA_HT_header(Header):
         layout.popover(
             panel="NLA_PT_filters",
             text="",
-            icon='FILTER',
+            icon_value=context.space_data.icon_from_filter,
         )
 
         row = layout.row(align=True)

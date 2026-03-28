@@ -1804,6 +1804,166 @@ static void rna_SpaceView3D_mirror_xr_session_update(Main *main,
 #  endif
 }
 
+static int rna_SpaceOutliner_icon_from_filter_get(PointerRNA *ptr)
+{
+  const SpaceOutliner *space_outliner = static_cast<const SpaceOutliner *>(ptr->data);
+  bool is_filtered = false;
+
+  /* Check typed filters and collection/view layer filters. */
+  if (space_outliner->filter & (SO_FILTER_NO_OBJECT | SO_FILTER_NO_OB_CONTENT | SO_FILTER_NO_CHILDREN |
+                                SO_FILTER_NO_OB_MESH | SO_FILTER_NO_OB_ARMATURE |
+                                SO_FILTER_NO_OB_EMPTY | SO_FILTER_NO_OB_LAMP |
+                                SO_FILTER_NO_OB_CAMERA | SO_FILTER_NO_OB_GREASE_PENCIL |
+                                SO_FILTER_NO_OB_OTHERS | SO_FILTER_NO_COLLECTION |
+                                SO_FILTER_NO_VIEW_LAYERS))
+  {
+    is_filtered = true;
+  }
+  /* Check state filters. */
+  if (space_outliner->filter_state != SO_FILTER_OB_ALL) {
+    is_filtered = true;
+  }
+  /* Check search string. */
+  if (space_outliner->search_string[0] != '\0') {
+    is_filtered = true;
+  }
+  /* Check search modifiers. */
+  if (space_outliner->search_flags & (SO_FIND_CASE_SENSITIVE | SO_FIND_COMPLETE)) {
+    is_filtered = true;
+  }
+  /* Check system overrides toggle. */
+  if (space_outliner->filter & SO_FILTER_SHOW_SYSTEM_OVERRIDES) {
+    is_filtered = true;
+  }
+
+  return is_filtered ? ICON_FILTER_FILLED : ICON_FILTER;
+}
+
+static int rna_SpaceDopeSheetEditor_icon_from_filter_get(PointerRNA *ptr)
+{
+  const SpaceAction *saction = static_cast<const SpaceAction *>(ptr->data);
+  const bDopeSheet *ads = &saction->ads;
+
+  bool is_filtered = false;
+
+  if (ads->filter_grp) {
+    is_filtered = true;
+  }
+  if (ads->searchstr[0] != '\0') {
+    is_filtered = true;
+  }
+  /* Ignore flags for header-level buttons (already visible in the header bar)
+   * and display flags that don't actually restrict things. */
+  const int ignore_flags = ADS_FILTER_SUMMARY | ADS_FILTER_INCL_HIDDEN |
+                           ADS_FILTER_ONLYSEL | ADS_FILTER_ONLY_SLOTS_OF_ACTIVE |
+                           ADS_FILTER_ONLY_ERRORS;
+  if (ads->filterflag & ~ignore_flags) {
+    is_filtered = true;
+  }
+  if (ads->filterflag2 != 0) {
+    is_filtered = true;
+  }
+
+  return is_filtered ? ICON_FILTER_FILLED : ICON_FILTER;
+}
+
+static int rna_SpaceNla_icon_from_filter_get(PointerRNA *ptr)
+{
+  const SpaceNla *snla = static_cast<const SpaceNla *>(ptr->data);
+  const bDopeSheet *ads = snla->ads;
+
+  bool is_filtered = false;
+
+  if (ads) {
+    if (ads->filter_grp) {
+      is_filtered = true;
+    }
+    if (ads->searchstr[0] != '\0') {
+      is_filtered = true;
+    }
+    /* Ignore flags for header-level buttons (already visible in the header bar)
+     * and internal NLA flags that are not user-facing. */
+    const int ignore_flags = ADS_FILTER_SUMMARY | ADS_FILTER_INCL_HIDDEN |
+                             ADS_FILTER_ONLYSEL | ADS_FILTER_NLA_NOACT |
+                             ADS_FILTER_ONLYNLA | ADS_FILTER_ONLY_ERRORS;
+    if (ads->filterflag & ~ignore_flags) {
+      is_filtered = true;
+    }
+    if (ads->filterflag2 != 0) {
+      is_filtered = true;
+    }
+  }
+
+  return is_filtered ? ICON_FILTER_FILLED : ICON_FILTER;
+}
+
+static int rna_SpaceFileBrowser_icon_from_filter_get(PointerRNA *ptr)
+{
+  const SpaceFile *sfile = static_cast<const SpaceFile *>(ptr->data);
+
+  /* Asset Browser mode: use asset_params, which is a superset of FileSelectParams. */
+  if (eFileBrowse_Mode(sfile->browse_mode) == FILE_BROWSE_MODE_ASSETS) {
+    const FileAssetSelectParams *asset_params = sfile->asset_params;
+    if (!asset_params) {
+      return ICON_FILTER;
+    }
+    const FileSelectParams *params = &asset_params->base_params;
+
+    bool is_filtered = false;
+
+    /* Active text search. */
+    if (params->filter_search[0] != '\0') {
+      is_filtered = true;
+    }
+
+    /* Check if any individual asset type is unchecked.
+     * We don't check against FILTER_ID_ALL because filter_id might only have
+     * the supported asset type bits set, or it might be filtered by preferences.
+     * We only care if any of the *currently supported* asset types are unchecked. */
+    uint64_t supported_mask = ED_ASSET_TYPE_IDS_NON_EXPERIMENTAL_FLAGS;
+    if ((params->filter_id & supported_mask) != supported_mask) {
+      is_filtered = true;
+    }
+
+    /* A specific catalog is selected (non-default catalog visibility). */
+    if (asset_params->asset_catalog_visibility != 0) {
+      is_filtered = true;
+    }
+
+    return is_filtered ? ICON_FILTER_FILLED : ICON_FILTER;
+  }
+
+  /* Regular File Browser mode. */
+  const FileSelectParams *params = sfile->params;
+  if (!params) {
+    return ICON_FILTER;
+  }
+
+  bool is_filtered = false;
+
+  /* Check generic text search. */
+  if (params->filter_search[0] != '\0') {
+    is_filtered = true;
+  }
+
+  /* Check ID type filter (filter_id bitmask). */
+  if (params->filter_id != 0) {
+    is_filtered = true;
+  }
+
+  /* Check glob filter. */
+  if (params->filter_glob[0] != '\0') {
+    is_filtered = true;
+  }
+
+  /* Check if file-type filter toggle is enabled. */
+  if (params->flag & FILE_FILTER) {
+    is_filtered = true;
+  }
+
+  return is_filtered ? ICON_FILTER_FILLED : ICON_FILTER;
+}
+
 static int rna_SpaceView3D_icon_from_show_object_viewport_get(PointerRNA *ptr)
 {
   const View3D *v3d = static_cast<View3D *>(ptr->data);
@@ -2556,6 +2716,37 @@ static bool rna_SpaceGraphEditor_has_ghost_curves_get(PointerRNA *ptr)
 {
   SpaceGraph *sipo = static_cast<SpaceGraph *>(ptr->data);
   return (BLI_listbase_is_empty(&sipo->runtime.ghost_curves) == false);
+}
+
+static int rna_SpaceGraphEditor_icon_from_filter_get(PointerRNA *ptr)
+{
+  const SpaceGraph *sipo = static_cast<const SpaceGraph *>(ptr->data);
+  const bDopeSheet *ads = sipo->ads;
+
+  bool is_filtered = false;
+
+  if (ads) {
+    if (ads->filter_grp) {
+      is_filtered = true;
+    }
+    if (ads->searchstr[0] != '\0') {
+      is_filtered = true;
+    }
+    /* Ignore flags for header-level buttons (already visible in the header bar),
+     * internal Graph Editor flags, and display flags that don't restrict things. */
+    const int ignore_flags = ADS_FILTER_SUMMARY | ADS_FILTER_INCL_HIDDEN |
+                             ADS_FILTER_ONLYSEL | ADS_FILTER_ONLY_SLOTS_OF_ACTIVE |
+                             ADS_FILTER_ONLYDRIVERS | ADS_FILTER_SELEDIT |
+                             ADS_FILTER_ONLY_ERRORS;
+    if (ads->filterflag & ~ignore_flags) {
+      is_filtered = true;
+    }
+    if (ads->filterflag2 != 0) {
+      is_filtered = true;
+    }
+  }
+
+  return is_filtered ? ICON_FILTER_FILLED : ICON_FILTER;
 }
 
 static void rna_SpaceConsole_rect_update(Main * /*bmain*/, Scene * /*scene*/, PointerRNA *ptr)
@@ -4402,6 +4593,10 @@ static void rna_def_space_outliner(BlenderRNA *brna)
   RNA_def_property_ui_text(prop, "Exclude from View Layer", "Exclude from view layer");
   RNA_def_property_ui_icon(prop, ICON_CHECKBOX_HLT, 0);
   RNA_def_property_update(prop, NC_SPACE | ND_SPACE_OUTLINER, nullptr);
+
+  prop = RNA_def_property(srna, "icon_from_filter", PROP_INT, PROP_NONE);
+  RNA_def_property_int_funcs(prop, "rna_SpaceOutliner_icon_from_filter_get", nullptr, nullptr);
+  RNA_def_property_clear_flag(prop, PROP_EDITABLE);
 
   prop = RNA_def_property(srna, "show_restrict_column_select", PROP_BOOLEAN, PROP_NONE);
   RNA_def_property_boolean_sdna(prop, nullptr, "show_restrict_flags", SO_RESTRICT_SELECT);
@@ -7017,6 +7212,11 @@ static void rna_def_space_dopesheet(BlenderRNA *brna)
   RNA_def_property_update(
       prop, NC_SPACE | ND_SPACE_DOPESHEET, "rna_SpaceDopeSheetEditor_mode_update");
 
+  prop = RNA_def_property(srna, "icon_from_filter", PROP_INT, PROP_NONE);
+  RNA_def_property_int_funcs(
+      prop, "rna_SpaceDopeSheetEditor_icon_from_filter_get", nullptr, nullptr);
+  RNA_def_property_clear_flag(prop, PROP_EDITABLE);
+
   /* display */
   prop = RNA_def_property(srna, "show_seconds", PROP_BOOLEAN, PROP_NONE);
   RNA_def_property_boolean_sdna(prop, nullptr, "flag", SACTION_DRAWTIME);
@@ -7261,6 +7461,10 @@ static void rna_def_space_graph(BlenderRNA *brna)
   RNA_def_property_pointer_sdna(prop, nullptr, "ads");
   RNA_def_property_ui_text(prop, "Dope Sheet", "Settings for filtering animation data");
 
+  prop = RNA_def_property(srna, "icon_from_filter", PROP_INT, PROP_NONE);
+  RNA_def_property_int_funcs(prop, "rna_SpaceGraphEditor_icon_from_filter_get", nullptr, nullptr);
+  RNA_def_property_clear_flag(prop, PROP_EDITABLE);
+
   /* Read-only state info. */
   prop = RNA_def_property(srna, "has_ghost_curves", PROP_BOOLEAN, PROP_NONE);
   RNA_def_property_boolean_funcs(prop, "rna_SpaceGraphEditor_has_ghost_curves_get", nullptr);
@@ -7305,6 +7509,10 @@ static void rna_def_space_nla(BlenderRNA *brna)
   RNA_def_property_boolean_sdna(prop, nullptr, "flag", SNLA_DRAWTIME);
   RNA_def_property_ui_text(prop, "Use Timecode", "Show timing as a timecode instead of frames");
   RNA_def_property_update(prop, NC_SPACE | ND_SPACE_NLA, nullptr);
+
+  prop = RNA_def_property(srna, "icon_from_filter", PROP_INT, PROP_NONE);
+  RNA_def_property_int_funcs(prop, "rna_SpaceNla_icon_from_filter_get", nullptr, nullptr);
+  RNA_def_property_clear_flag(prop, PROP_EDITABLE);
 
   prop = RNA_def_property(srna, "show_strip_curves", PROP_BOOLEAN, PROP_NONE);
   RNA_def_property_boolean_negative_sdna(prop, nullptr, "flag", SNLA_NOSTRIPCURVES);
@@ -7885,6 +8093,10 @@ static void rna_def_space_filebrowser(BlenderRNA *brna)
       "Browsing Mode",
       "Type of the File Editor view (regular file browsing or asset browsing)");
   RNA_def_property_update(prop, 0, "rna_SpaceFileBrowser_browse_mode_update");
+
+  prop = RNA_def_property(srna, "icon_from_filter", PROP_INT, PROP_NONE);
+  RNA_def_property_int_funcs(prop, "rna_SpaceFileBrowser_icon_from_filter_get", nullptr, nullptr);
+  RNA_def_property_clear_flag(prop, PROP_EDITABLE);
 
   prop = RNA_def_property(srna, "params", PROP_POINTER, PROP_NONE);
   RNA_def_property_struct_type(prop, "FileSelectParams");

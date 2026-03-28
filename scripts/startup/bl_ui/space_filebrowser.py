@@ -45,7 +45,7 @@ class FILEBROWSER_HT_header(Header):
         layout.popover(
             panel="ASSETBROWSER_PT_filter",
             text="",
-            icon='FILTER',
+            icon_value=context.space_data.icon_from_filter,
         )
 
         layout.operator(

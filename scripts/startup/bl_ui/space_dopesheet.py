@@ -269,7 +269,7 @@ class DOPESHEET_HT_editor_buttons:
         layout.popover(
             panel="DOPESHEET_PT_filters",
             text="",
-            icon='FILTER',
+            icon_value=st.icon_from_filter,
         )
 
         tool_settings = context.tool_settings

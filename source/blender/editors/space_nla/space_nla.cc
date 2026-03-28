@@ -337,6 +337,27 @@ static void nla_header_region_draw(const bContext *C, ARegion *region)
   ED_region_header(C, region);
 }
 
+static void nla_header_region_listener(const wmRegionListenerParams *params)
+{
+  ARegion *region = params->region;
+  const wmNotifier *wmn = params->notifier;
+
+  /* Redraw header when filter settings change (e.g. from the filter popover)
+   * so the filter icon updates in real-time. */
+  switch (wmn->category) {
+    case NC_ANIMATION:
+      if (ELEM(wmn->data, ND_ANIMCHAN)) {
+        ED_region_tag_redraw(region);
+      }
+      break;
+    case NC_SPACE:
+      if (wmn->data == ND_SPACE_NLA) {
+        ED_region_tag_redraw(region);
+      }
+      break;
+  }
+}
+
 static void nla_footer_region_listener(const wmRegionListenerParams *params)
 {
   ARegion *region = params->region;
@@ -696,6 +717,7 @@ void ED_spacetype_nla()
 
   art->init = nla_header_region_init;
   art->draw = nla_header_region_draw;
+  art->listener = nla_header_region_listener;
 
   BLI_addhead(&st->regiontypes, art);
 

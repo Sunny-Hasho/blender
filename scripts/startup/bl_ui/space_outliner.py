@@ -62,7 +62,7 @@ class OUTLINER_HT_header(Header):
             row.popover(
                 panel="OUTLINER_PT_filter",
                 text="",
-                icon='FILTER',
+                icon_value=space.icon_from_filter,
             )
 
         if display_mode in {'LIBRARIES', 'ORPHAN_DATA'}:

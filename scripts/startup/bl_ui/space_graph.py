@@ -76,7 +76,7 @@ class GRAPH_HT_header(Header):
         layout.popover(
             panel="GRAPH_PT_filters",
             text="",
-            icon='FILTER',
+            icon_value=st.icon_from_filter,
         )
 
         layout.prop(st, "pivot_point", icon_only=True)
